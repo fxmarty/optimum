@@ -20,7 +20,7 @@ def generate_doc_dataclass(cls) -> str:
                 type_display = attribute_type.split(".")[-1]
             else:
                 type_display = attribute.type.__name__
-                
+
         if optional:
             doc += f" (`{type_display}`, *optional*): "
         else:

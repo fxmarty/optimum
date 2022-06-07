@@ -23,5 +23,6 @@ _pydantic_available = importlib.util.find_spec("pydantic") is not None
 def is_onnxruntime_available():
     return _onnxruntime_available
 
+
 def is_pydantic_available():
     return _pydantic_available
