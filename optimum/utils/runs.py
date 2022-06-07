@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Union
 
 from . import is_pydantic_available
+from .doc import generate_doc_dataclass
 
 if is_pydantic_available():
     from pydantic.dataclasses import dataclass
@@ -37,11 +38,6 @@ class APIFeaturesManager:
                 f"If you want to support {task} please propose a PR or open up an issue."
             )
 
-"""
-class BaseModelNoExtra(BaseModel):
-    class Config:
-        extra = Extra.forbid  # ban additional arguments
-"""
 
 class Frameworks(str, Enum):
     onnxruntime = "onnxruntime"
@@ -58,6 +54,7 @@ class QuantizationApproach(str, Enum):
     dynamic = "dynamic"
 
 
+@generate_doc_dataclass
 @dataclass
 class Calibration:
     """Parameters for post-training calibration with static quantization."""
@@ -78,12 +75,14 @@ class Calibration:
     )
 
 
+@generate_doc_dataclass
 @dataclass
 class FrameworkArgs:
     opset: Optional[int] = field(default=15, metadata={"description": "ONNX opset version to export the model with."})
     optimization_level: Optional[int] = field(default=0, metadata={"description": "ONNX optimization level."})
 
 
+@generate_doc_dataclass
 @dataclass
 class Versions:
     transformers: str = field(metadata={"description": "Transformers version."})
@@ -93,12 +92,14 @@ class Versions:
     torch_ort: Optional[str] = field(default=None, metadata={"description": "Torch-ort version."})
 
 
+@generate_doc_dataclass
 @dataclass
 class Evaluation:
     time: List[Dict] = field(metadata={"description": "Measures of inference time (latency, throughput)."})
     others: Dict = field(metadata={"description": "Metrics measuring the performance on the given task."})
 
 
+@generate_doc_dataclass
 @dataclass
 class DatasetArgs:
     """Parameters related to the dataset."""
@@ -111,6 +112,7 @@ class DatasetArgs:
     calibration_split: Optional[str] = field(default=None, metadata={"description": 'Dataset split used for calibration (e.g. "train").'})
 
 
+@generate_doc_dataclass
 @dataclass
 class TaskArgs:
     """Task-specific parameters."""
@@ -127,6 +129,7 @@ class _RunBase:
     framework: Frameworks = field(metadata={"description": 'Name of the framework used (e.g. "onnxruntime").'})
     framework_args: FrameworkArgs = field(metadata={"description": "Framework-specific arguments."})
 
+
 @dataclass
 class _RunDefaults:
     operators_to_quantize: Optional[List[str]] = field(default_factory=lambda: ["Add", "MatMul"], metadata={"description": 'Operators to quantize, doing no modifications to others (default: `["Add", "MatMul"]`).'})
@@ -142,23 +145,20 @@ class _RunConfigBase:
     """Parameters defining a run. A run is an evaluation of a triplet (model, dataset, metric) coupled with optimization parameters, allowing to compare a transformers baseline and a model optimized with Optimum."""
     metrics: List[str] = field(metadata={"description": "List of metrics to evaluate on."})
 
+
 @dataclass
 class _RunConfigDefaults(_RunDefaults):
     batch_sizes: Optional[List[int]] = field(default_factory=lambda: [4, 8], metadata={"description": "Batch sizes to include in the run to measure time metrics."})
     input_lengths: Optional[List[int]] = field(default_factory=lambda: [128], metadata={"description": "Input lengths to include in the run to measure time metrics."})
+
 
 @dataclass
 class Run(_RunDefaults, _RunBase):
     pass
 
 
-def my_decorator(cls) -> str:
-    """Class decorator for pydantic's BaseModel to generate the documentation."""
-    for field in cls.__dataclass_fields__:
-        print(field)
-    return cls
-
+@generate_doc_dataclass
 @dataclass
-@my_decorator
 class RunConfig(Run, _RunConfigDefaults, _RunConfigBase):
+    """Class holding the parameters to launch a run."""
     pass
