@@ -1,9 +1,6 @@
 from dataclasses import field
-from pydantic.dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Union
-
-from pydantic import BaseModel, Extra
 
 from . import is_pydantic_available
 
@@ -40,9 +37,11 @@ class APIFeaturesManager:
                 f"If you want to support {task} please propose a PR or open up an issue."
             )
 
+"""
 class BaseModelNoExtra(BaseModel):
     class Config:
         extra = Extra.forbid  # ban additional arguments
+"""
 
 class Frameworks(str, Enum):
     onnxruntime = "onnxruntime"
@@ -63,77 +62,103 @@ class QuantizationApproach(str, Enum):
 class Calibration:
     """Parameters for post-training calibration with static quantization."""
 
-    method: CalibrationMethods = field(metadata={"help": "hehehehe"})
-    num_calibration_samples: int = field()
+    method: CalibrationMethods = field(metadata={"description": 'Calibration method used, either "minmax", "entropy" or "percentile".'})
+    num_calibration_samples: int = field(metadata={"description": "Number of examples to use for the calibration step resulting from static quantization."})
     calibration_histogram_percentile: Optional[float] = field(
         default=None,
+        metadata={"description": "The percentile used for the percentile calibration method."}
     )
     calibration_moving_average: Optional[bool] = field(
         default=None,
+        metadata={"description": "Whether to compute the moving average of the minimum and maximum values for the minmax calibration method."}
     )
     calibration_moving_average_constant: Optional[float] = field(
         default=None,
+        metadata={"description": "Constant smoothing factor to use when computing the moving average of the minimum and maximum values. Effective only when the selected calibration method is minmax and `calibration_moving_average` is set to True."}
     )
 
 
 @dataclass
 class FrameworkArgs:
-    opset: Optional[int] = field(default=15)
-    optimization_level: Optional[int] = field(default=0)
+    opset: Optional[int] = field(default=15, metadata={"description": "ONNX opset version to export the model with."})
+    optimization_level: Optional[int] = field(default=0, metadata={"description": "ONNX optimization level."})
 
 
 @dataclass
 class Versions:
-    transformers: str = field()
-    optimum: str = field()
-    optimum_hash: Optional[str]
-    onnxruntime: Optional[str]
-    torch_ort: Optional[str]
+    transformers: str = field(metadata={"description": "Transformers version."})
+    optimum: str = field(metadata={"description": "Optimum version."})
+    optimum_hash: Optional[str] = field(default=None, metadata={"description": "Optimum commit hash, in case the dev version is used."})
+    onnxruntime: Optional[str] = field(default=None, metadata={"description": "Onnx Runtime version."})
+    torch_ort: Optional[str] = field(default=None, metadata={"description": "Torch-ort version."})
 
 
 @dataclass
 class Evaluation:
-    time: List[Dict]
-    others: Dict
+    time: List[Dict] = field(metadata={"description": "Measures of inference time (latency, throughput)."})
+    others: Dict = field(metadata={"description": "Metrics measuring the performance on the given task."})
 
 
 @dataclass
 class DatasetArgs:
     """Parameters related to the dataset."""
 
-    path: str = field()
-    eval_split: str = field()
-    data_keys: Dict[str, Union[None, str]] = field()
-    ref_keys: List[str] = field()
-    name: Optional[str] = field(default=None)
-    calibration_split: Optional[str] = field(default=None)
+    path: str = field(metadata={"description": "Path to the dataset, as in `datasets.load_dataset(path)`."})
+    eval_split: str = field(metadata={"description": 'Dataset split used for evaluation (e.g. "test").'})
+    data_keys: Dict[str, Union[None, str]] = field(metadata={"description": 'Dataset columns used as input data. At most two, indicated with "primary" and "secondary".'})
+    ref_keys: List[str] = field(metadata={"description": "Dataset column used for references during evaluation."})
+    name: Optional[str] = field(default=None, metadata={"description": "Name of the dataset, as in `datasets.load_dataset(path, name)`."})
+    calibration_split: Optional[str] = field(default=None, metadata={"description": 'Dataset split used for calibration (e.g. "train").'})
 
 
 @dataclass
 class TaskArgs:
     """Task-specific parameters."""
 
-    is_regression: Optional[bool] = field(default=None)
+    is_regression: Optional[bool] = field(default=None, metadata={"description": "Text classification specific. Set whether the task is regression (output = one float)."})
 
 
 @dataclass
-class RunConfig():
+class _RunBase:
+    model_name_or_path: str = field(metadata={"description": "Name of the model hosted on the Hub to use for the run."})
+    task: str = field(metadata={"description": "Task performed by the model."})
+    quantization_approach: QuantizationApproach = field(metadata={"description": "Whether to use dynamic or static quantization."})
+    dataset: DatasetArgs = field(metadata={"description": "Dataset to use. Several keys must be set on top of the dataset name."})
+    framework: Frameworks = field(metadata={"description": 'Name of the framework used (e.g. "onnxruntime").'})
+    framework_args: FrameworkArgs = field(metadata={"description": "Framework-specific arguments."})
+
+@dataclass
+class _RunDefaults:
+    operators_to_quantize: Optional[List[str]] = field(default_factory=lambda: ["Add", "MatMul"], metadata={"description": 'Operators to quantize, doing no modifications to others (default: `["Add", "MatMul"]`).'})
+    node_exclusion: Optional[List[str]] = field(default_factory=lambda: [], metadata={"description": "Specific nodes to exclude from being quantized (default: `[]`)."})
+    per_channel: Optional[bool] = field(default=False, metadata={"description": "Whether to quantize per channel (default: `False`)."})
+    calibration: Optional[Calibration] = field(default=None, metadata={"description": "Calibration parameters, in case static quantization is used."})
+    task_args: Optional[TaskArgs] = field(default=None, metadata={"description": "Task-specific arguments (default: `None`)."})
+    aware_training: Optional[bool] = field(default=False, metadata={"description": "Whether the quantization is to be done with Quantization-Aware Training (not supported)."})
+
+
+@dataclass
+class _RunConfigBase:
     """Parameters defining a run. A run is an evaluation of a triplet (model, dataset, metric) coupled with optimization parameters, allowing to compare a transformers baseline and a model optimized with Optimum."""
+    metrics: List[str] = field(metadata={"description": "List of metrics to evaluate on."})
 
-    model_name_or_path: str = field()
-    task: str = field()
-    quantization_approach: QuantizationApproach = field()
-    dataset: DatasetArgs = field()
-    framework: Frameworks = field()
-    framework_args: FrameworkArgs = field()
-    batch_sizes: Optional[List[int]] = field(default_factory=lambda: [4, 8])
-    input_lengths: Optional[List[int]] = field(default_factory=lambda: [128])
-    operators_to_quantize: Optional[List[str]] = field(default_factory=lambda: ["Add", "MatMul"])
-    node_exclusion: Optional[List[str]] = field(default_factory=lambda: [])
-    
-    metrics: List[str] = field(default="accuracy")
-    per_channel: Optional[bool] = field(default=False)
-    calibration: Optional[Calibration] = field(default=None)
-    task_args: Optional[TaskArgs] = field(default=None)
-    aware_training: Optional[bool] = field(default=False)
+@dataclass
+class _RunConfigDefaults(_RunDefaults):
+    batch_sizes: Optional[List[int]] = field(default_factory=lambda: [4, 8], metadata={"description": "Batch sizes to include in the run to measure time metrics."})
+    input_lengths: Optional[List[int]] = field(default_factory=lambda: [128], metadata={"description": "Input lengths to include in the run to measure time metrics."})
 
+@dataclass
+class Run(_RunDefaults, _RunBase):
+    pass
+
+
+def my_decorator(cls) -> str:
+    """Class decorator for pydantic's BaseModel to generate the documentation."""
+    for field in cls.__dataclass_fields__:
+        print(field)
+    return cls
+
+@dataclass
+@my_decorator
+class RunConfig(Run, _RunConfigDefaults, _RunConfigBase):
+    pass
