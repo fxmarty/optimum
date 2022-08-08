@@ -22,7 +22,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 from packaging import version
 from transformers import PretrainedConfig
 from transformers import __version__ as transformers_version
-from transformers.file_utils import cached_path, get_list_of_files, hf_bucket_url, is_offline_mode, is_remote_url
+from transformers.file_utils import is_offline_mode
 
 from .utils import logging
 from .version import __version__
@@ -183,17 +183,11 @@ class BaseConfig(PretrainedConfig):
                 local_files_only=local_files_only,
             )
 
-            if os.path.isdir(pretrained_model_name_or_path):
-                config_file = os.path.join(pretrained_model_name_or_path, configuration_file)
-            else:
-                config_file = hf_bucket_url(
-                    pretrained_model_name_or_path, filename=configuration_file, revision=revision, mirror=None
-                )
-
         try:
             # Load from URL or cache if already cached
-            resolved_config_file = cached_path(
-                config_file,
+            resolved_config_file = cached_file(
+                pretrained_model_name_or_path,
+                configuration_file,
                 cache_dir=cache_dir,
                 force_download=force_download,
                 proxies=proxies,
@@ -201,36 +195,34 @@ class BaseConfig(PretrainedConfig):
                 local_files_only=local_files_only,
                 use_auth_token=use_auth_token,
                 user_agent=user_agent,
+                revision=revision,
+                subfolder=subfolder,
             )
+        except EnvironmentError:
+            # Raise any environment error raise by `cached_file`. It will have a helpful error message adapted to
+            # the original exception.
+            raise
+        except Exception:
+            # For any other exception, we throw a generic error.
+            raise EnvironmentError(
+                f"Can't load the configuration of '{pretrained_model_name_or_path}'. If you were trying to load it"
+                " from 'https://huggingface.co/models', make sure you don't have a local directory with the same"
+                f" name. Otherwise, make sure '{pretrained_model_name_or_path}' is the correct path to a directory"
+                f" containing a {configuration_file} file"
+            )
+
+        try:
             # Load config dict
             config_dict = cls._dict_from_json_file(resolved_config_file)
-
-        except EnvironmentError as err:
-            logger.error(err)
-            msg = (
-                f"Can't load config for '{pretrained_model_name_or_path}'. Make sure that:\n\n"
-                f"- '{pretrained_model_name_or_path}' is a correct model identifier listed on 'https://huggingface.co/models'\n"
-                f"  (make sure '{pretrained_model_name_or_path}' is not a path to a local directory with something else, in that case)\n\n"
-                f"- or '{pretrained_model_name_or_path}' is the correct path to a directory containing a {cls.CONFIG_NAME} file\n\n"
-            )
-
-            if revision is not None:
-                msg += f"- or '{revision}' is a valid git identifier (branch name, a tag name, or a commit id) that exists for this model name as listed on its model page on 'https://huggingface.co/models'\n\n"
-
-            raise EnvironmentError(msg)
-
         except (json.JSONDecodeError, UnicodeDecodeError):
-            msg = (
-                f"Couldn't reach server at '{config_file}' to download configuration file or "
-                "configuration file is not a valid JSON file. "
-                f"Please check network or file content here: {resolved_config_file}."
+            raise EnvironmentError(
+                f"It looks like the config file at '{resolved_config_file}' is not a valid JSON file."
             )
-            raise EnvironmentError(msg)
 
-        if resolved_config_file == config_file:
-            logger.info(f"loading configuration file {config_file}")
+        if is_local:
+            logger.info(f"loading configuration file {resolved_config_file}")
         else:
-            logger.info(f"loading configuration file {config_file} from cache at {resolved_config_file}")
+            logger.info(f"loading configuration file {configuration_file} from cache at {resolved_config_file}")
 
         return config_dict, kwargs
 
