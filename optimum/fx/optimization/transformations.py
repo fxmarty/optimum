@@ -546,15 +546,10 @@ class FuseBatchNorm2dInConv2d(Transformation):
                     if len(node.args[0].users) > 1:  # Output of conv is used by other nodes
                         continue
 
-                    fused_conv = self.fuse(
+                    self.fuse(
                         conv2d=graph_module.get_submodule(node.args[0].target),
                         bn2d=graph_module.get_submodule(node.target),
                     )
-
-                    # replace the old nn.Conv2d by the fused one
-                    parent_name, _, name = node.args[0].target.rpartition(".")
-                    parent_module = graph_module.get_submodule(parent_name)
-                    setattr(parent_module, name, fused_conv)
 
                     # delete batchnorm from the modules
                     parent_name, _, name = node.target.rpartition(".")
@@ -566,8 +561,6 @@ class FuseBatchNorm2dInConv2d(Transformation):
         return graph_module
 
     def fuse(self, conv2d: torch.nn.Conv2d, bn2d: torch.nn.BatchNorm2d):
-        fused_conv = copy.deepcopy(conv2d)
-
         # handle the case where there is no bias in the conv or the batchnorm has no learnable parameters
         conv_b = conv2d.bias if conv2d.bias is not None else torch.zeros_like(bn2d.running_mean)
         bn_w = bn2d.weight if bn2d.weight is not None else torch.ones_like(bn2d.running_mean)
@@ -575,14 +568,11 @@ class FuseBatchNorm2dInConv2d(Transformation):
 
         bn_var_rsqrt = torch.rsqrt(bn2d.running_var + bn2d.eps)
 
-        fused_conv.weight = torch.nn.Parameter(
+        conv2d.weight = torch.nn.Parameter(
             conv2d.weight * (bn_w * bn_var_rsqrt).reshape([-1] + [1] * (len(conv2d.weight.shape) - 1))
         )
 
-        fused_conv.bias = torch.nn.Parameter(conv_b - bn2d.running_mean * bn_var_rsqrt * bn_w + bn_b)
-
-        return fused_conv
-
+        conv2d.bias = torch.nn.Parameter(conv_b - bn2d.running_mean * bn_var_rsqrt * bn_w + bn_b)
 
 @add_end_docstrings(_ATTRIBUTES_DOCSTRING)
 class FuseBatchNorm1dInLinear(Transformation):
