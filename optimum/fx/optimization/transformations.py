@@ -907,6 +907,3 @@ def compose(*args: Transformation, inplace: bool = True) -> Transformation:
                 return ComposeTransformation._reverse_composition(graph_module)
 
     return ComposeTransformation()
-
-def foo():
-    raise ValueError()
