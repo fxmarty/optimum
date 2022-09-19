@@ -2,7 +2,7 @@ import os
 import subprocess
 from contextlib import contextmanager
 from time import perf_counter_ns
-from typing import Set
+from typing import Optional, Set
 
 import numpy as np
 import torch
@@ -237,20 +237,25 @@ class TimeBenchmark:
 
         return benchmarks_stats
 
-    def execute(self):
+    def execute(self, device: Optional[torch.device] = torch.device("cpu")):
         inputs = {}
 
         checked_inputs = {"input_ids", "attention_mask", "token_type_ids", "pixel_values"}
         if "input_ids" in self.model_input_names:
-            inputs["input_ids"] = torch.randint(high=1000, size=(self.batch_size, self.input_length))
+            inputs["input_ids"] = torch.randint(high=1000, size=(self.batch_size, self.input_length), device=device)
         if "attention_mask" in self.model_input_names:
-            inputs["attention_mask"] = torch.ones(self.batch_size, self.input_length, dtype=torch.int64)
+            inputs["attention_mask"] = torch.ones(self.batch_size, self.input_length, dtype=torch.int64, device=device)
         if "token_type_ids" in self.model_input_names:
-            inputs["token_type_ids"] = torch.ones(self.batch_size, self.input_length, dtype=torch.int64)
+            inputs["token_type_ids"] = torch.ones(self.batch_size, self.input_length, dtype=torch.int64, device=device)
         if "pixel_values" in self.model_input_names:
             # TODO support grayscale?
             inputs["pixel_values"] = torch.rand(
-                self.batch_size, 3, self.model.config.image_size, self.model.config.image_size, dtype=torch.float32
+                self.batch_size,
+                3,
+                self.model.config.image_size,
+                self.model.config.image_size,
+                dtype=torch.float32,
+                device=device,
             )
 
         if np.any([k not in checked_inputs for k in self.model_input_names]):

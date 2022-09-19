@@ -180,7 +180,13 @@ class ORTModel(OptimizedModel):
                 f"Asked to use {provider} as an ONNX Runtime execution provider, but the available execution providers are {available_providers}."
             )
 
-        return ort.InferenceSession(path, providers=[provider], sess_options=session_options)
+        if provider == "TensorrtExecutionProvider":
+            # follow advice in https://onnxruntime.ai/docs/execution-providers/TensorRT-ExecutionProvider.html#python
+            return ort.InferenceSession(
+                path, providers=[provider, "CUDAExecutionProvider"], sess_options=session_options
+            )
+        else:
+            return ort.InferenceSession(path, providers=[provider], sess_options=session_options)
 
     def _save_pretrained(self, save_directory: Union[str, Path], file_name: Optional[str] = None, **kwargs):
         """
