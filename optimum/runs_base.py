@@ -237,7 +237,7 @@ class TimeBenchmark:
 
         return benchmarks_stats
 
-    def execute(self, device: Optional[torch.device] = torch.device("cpu")):
+    def execute(self, device: Optional[torch.device] = torch.device("cpu"), track: bool = True):
         inputs = {}
 
         checked_inputs = {"input_ids", "attention_mask", "token_type_ids", "pixel_values"}
@@ -262,6 +262,8 @@ class TimeBenchmark:
             raise NotImplementedError(
                 f"At least an input in {self.model_input_names} has no dummy generation for time benchmark."
             )
+        
+        print(f"Running time tracking in {self.benchmark_duration:.1f}s.")
 
         # Warmup
         for _ in trange(self.warmup_runs, desc="Warming up"):
@@ -269,14 +271,20 @@ class TimeBenchmark:
 
         if self.benchmark_duration != 0:
             benchmark_duration_ns = self.benchmark_duration * SEC_TO_NS_SCALE
-            print(f"Running time tracking in {self.benchmark_duration:.1f}s.")
-            while sum(self.latencies) < benchmark_duration_ns:
-                # TODO not trak GPU/CPU <--> numpy/torch, need to change the implementation of forward
-                with self.track():
+            
+            if track:
+                while sum(self.latencies) < benchmark_duration_ns:
+                    # TODO not trak GPU/CPU <--> numpy/torch, need to change the implementation of forward
+                    with self.track():
+                        self.model.forward(**inputs)
+            else:
+                for i in range(1):
                     self.model.forward(**inputs)
+
 
             self.finalize(benchmark_duration_ns)
 
+        if self.benchmark_duration != 0 and track:
             return self.to_dict()
         else:
             benchmarks_stats = {
