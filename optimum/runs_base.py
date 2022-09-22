@@ -1,7 +1,7 @@
 import os
 import subprocess
 from contextlib import contextmanager
-from time import perf_counter_ns
+from time import perf_counter_ns, sleep
 from typing import Optional, Set
 
 import numpy as np
@@ -269,6 +269,8 @@ class TimeBenchmark:
         for _ in trange(self.warmup_runs, desc="Warming up"):
             self.model.forward(**inputs)
 
+        sleep(3)
+
         if self.benchmark_duration != 0:
             benchmark_duration_ns = self.benchmark_duration * SEC_TO_NS_SCALE
             
@@ -278,8 +280,10 @@ class TimeBenchmark:
                     with self.track():
                         self.model.forward(**inputs)
             else:
-                for i in range(1):
+                start = perf_counter_ns()
+                for i in range(1000):
                     self.model.forward(**inputs)
+                print("took", (perf_counter_ns() - start) / SEC_TO_NS_SCALE)
 
 
             self.finalize(benchmark_duration_ns)
