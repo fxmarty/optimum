@@ -160,6 +160,7 @@ class ORTModel(OptimizedModel):
         path: Union[str, Path],
         provider: Optional[str] = "CPUExecutionProvider",
         session_options: Optional[ort.SessionOptions] = None,
+        provider_options: Optional[Dict] = None,
         **kwargs
     ):
         """
@@ -183,10 +184,10 @@ class ORTModel(OptimizedModel):
         if provider == "TensorrtExecutionProvider":
             # follow advice in https://onnxruntime.ai/docs/execution-providers/TensorRT-ExecutionProvider.html#python
             return ort.InferenceSession(
-                path, providers=[provider, "CUDAExecutionProvider"], sess_options=session_options
+                path, providers=[provider, "CUDAExecutionProvider"], sess_options=session_options, provider_options=provider_options
             )
         else:
-            return ort.InferenceSession(path, providers=[provider], sess_options=session_options)
+            return ort.InferenceSession(path, providers=[provider], sess_options=session_options, provider_options=provider_options)
 
     def _save_pretrained(self, save_directory: Union[str, Path], file_name: Optional[str] = None, **kwargs):
         """
@@ -216,6 +217,7 @@ class ORTModel(OptimizedModel):
         cache_dir: Optional[str] = None,
         provider: Optional[str] = "CPUExecutionProvider",
         session_options: Optional[ort.SessionOptions] = None,
+        provider_options: Optional[Dict] = None,
         *args,
         **kwargs
     ):
@@ -237,6 +239,7 @@ class ORTModel(OptimizedModel):
             cache_dir,
             provider=provider,
             session_options=session_options,
+            provider_options=provider_options,
             *args,
             **kwargs,
         )
