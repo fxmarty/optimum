@@ -160,7 +160,7 @@ class ORTModel(OptimizedModel):
         path: Union[str, Path],
         provider: Optional[str] = "CPUExecutionProvider",
         session_options: Optional[ort.SessionOptions] = None,
-        provider_options: Optional[Dict] = None,
+        provider_options: Optional[List[Dict]] = None,
         **kwargs
     ):
         """
