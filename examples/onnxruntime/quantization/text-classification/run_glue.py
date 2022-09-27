@@ -404,6 +404,8 @@ def main():
         operators_to_quantize=["MatMul", "Add"],
         activations_symmetric=True,
         weights_symmetric=True,
+        qdq_dedicated_pair=True,
+        qdq_add_pair_to_weight=True,
     )
 
     ranges = None
