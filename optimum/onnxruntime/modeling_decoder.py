@@ -13,6 +13,7 @@
 #  limitations under the License.
 """Classes handling causal-lm related architectures in ONNX Runtime."""
 
+import time
 import logging
 import shutil
 from pathlib import Path
@@ -305,8 +306,14 @@ class ORTDecoder:
                 for input_name, past_key_value in zip(self.key_value_input_names, past_key_values):
                     onnx_inputs[input_name] = past_key_value.cpu().detach().numpy()
 
+            for name, inp in onnx_inputs.items():
+                print(name, inp.shape)
+            
+            start = time.time()
             # Run inference
             outputs = self.session.run(None, onnx_inputs)
+            print("took:", time.time() - start)
+            print("-----")
 
             # Tuple of length equal to : number of layer * number of past_key_value per decoder layer (2 for the self-attention)
             past_key_values = tuple(
