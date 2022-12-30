@@ -234,7 +234,8 @@ def validate_model_outputs(
             value = config.flatten_output_collection_property(name, value)
             onnx_inputs.update({tensor_name: pt_tensor.cpu().numpy() for tensor_name, pt_tensor in value.items()})
         else:
-            onnx_inputs[name] = value.cpu().numpy()
+            onnx_inputs[name] = value.cpu().numpy().astype(np.int32)
+            print("input:", name)
 
     # Compute outputs from the ONNX model
     onnx_outputs = session.run(onnx_named_outputs, onnx_inputs)
@@ -359,6 +360,10 @@ def export_pytorch(
         output_names = list(config.outputs.keys())
 
         config.patch_ops()
+
+        for name, inp in dummy_inputs.items():
+            print("input name:", name)
+            dummy_inputs[name] = inp.to(dtype=torch.int32)
 
         # PyTorch deprecated the `enable_onnx_checker` and `use_external_data_format` arguments in v1.11,
         # so we check the torch version for backwards compatibility
