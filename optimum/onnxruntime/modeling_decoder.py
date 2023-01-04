@@ -15,6 +15,7 @@
 
 import logging
 import shutil
+import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
@@ -306,7 +307,9 @@ class ORTDecoder:
                     onnx_inputs[input_name] = past_key_value.cpu().detach().numpy()
 
             # Run inference
+            start = time.time()
             outputs = self.session.run(None, onnx_inputs)
+            print("took:", time.time() - start)
 
             # Tuple of length equal to : number of layer * number of past_key_value per decoder layer (2 for the self-attention)
             past_key_values = tuple(
