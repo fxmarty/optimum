@@ -383,7 +383,7 @@ class ORTModelDecoder(ORTModel):
             )
 
         self.use_cache = decoder_with_past_session is not None
-        self.decoder = CustomORTDecoder(
+        self.decoder = ORTDecoder(
             session=decoder_session, config=self.config, device=self._device, use_io_binding=self.use_io_binding
         )
         self.decoder_model_path = Path(decoder_session._model_path)
@@ -393,7 +393,7 @@ class ORTModelDecoder(ORTModel):
         self.decoder_with_past_model_path = None
         self.decoder_with_past_model_name = None
         if self.use_cache:
-            self.decoder_with_past = CustomORTDecoder(
+            self.decoder_with_past = ORTDecoder(
                 session=decoder_with_past_session,
                 config=self.config,
                 device=self._device,
