@@ -115,7 +115,6 @@ TEXT_GENERATION_EXAMPLE = r"""
 DECODER_ONNX_FILE_PATTERN = r"(.*)?decoder((?!with_past).)*?\.onnx"
 DECODER_WITH_PAST_ONNX_FILE_PATTERN = r"(.*)?decoder(.*)?with_past(.*)?\.onnx"
 
-
 class ORTDecoder:
     """
     Decoder model with a language modeling head on top for ONNX Runtime inference.
@@ -325,7 +324,6 @@ class ORTDecoder:
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
-
 class ORTModelDecoder(ORTModel):
     """
     Base class for implementing models with a causal language modeling head using ONNX Runtime inference.
@@ -385,7 +383,7 @@ class ORTModelDecoder(ORTModel):
             )
 
         self.use_cache = decoder_with_past_session is not None
-        self.decoder = ORTDecoder(
+        self.decoder = CustomORTDecoder(
             session=decoder_session, config=self.config, device=self._device, use_io_binding=self.use_io_binding
         )
         self.decoder_model_path = Path(decoder_session._model_path)
@@ -395,7 +393,7 @@ class ORTModelDecoder(ORTModel):
         self.decoder_with_past_model_path = None
         self.decoder_with_past_model_name = None
         if self.use_cache:
-            self.decoder_with_past = ORTDecoder(
+            self.decoder_with_past = CustomORTDecoder(
                 session=decoder_with_past_session,
                 config=self.config,
                 device=self._device,
@@ -741,7 +739,6 @@ class ORTModelDecoder(ORTModel):
 
         return self
 
-
 class ORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
     """
     ONNX model with a causal language modeling head for ONNX Runtime inference.
@@ -765,6 +762,10 @@ class ORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
         past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
         **kwargs,
     ) -> CausalLMOutputWithCrossAttentions:
+        print("-----")
+        print("input_ids.shape", input_ids.shape)
+        print("attention_mask.shape", attention_mask.shape)
+        print("past_key_values[0][0].shape", past_key_values[0][0].shape if past_key_values is not None else "NONE")
 
         if past_key_values is None or self.decoder_with_past is None:
             outputs = self.decoder(input_ids=input_ids, attention_mask=attention_mask)
@@ -774,6 +775,10 @@ class ORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
                 past_key_values=past_key_values,
                 attention_mask=attention_mask,
             )
+
+        print("outputs.logits shape", outputs.logits.shape)
+        print("outputs.logits", outputs.logits[0][0][100:105])
+        print("outputs.logits argmax", outputs.logits[0][0].argmax())
 
         return CausalLMOutputWithCrossAttentions(logits=outputs.logits, past_key_values=outputs.past_key_values)
 
@@ -786,7 +791,7 @@ class ORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
 
         return {
             "input_ids": input_ids,
-            "past_key_values": past_key_values or kwargs.get("past", None),
+            "past_key_values": past_key_values,
             "use_cache": use_cache,
             "position_ids": None,
             "attention_mask": attention_mask,
