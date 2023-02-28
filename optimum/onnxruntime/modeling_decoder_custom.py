@@ -260,6 +260,7 @@ class CustomORTDecoder:
         input_ids: torch.LongTensor,
         attention_mask: Optional[torch.LongTensor] = None,
         past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+        position_ids=None,
     ) -> CausalLMOutputWithCrossAttentions:
         # Flatten the past_key_values
         if past_key_values is not None:
@@ -288,6 +289,7 @@ class CustomORTDecoder:
             onnx_inputs = {
                 "input_ids": input_ids.cpu().detach().numpy(),
                 "attention_mask": attention_mask.cpu().detach().numpy(),
+                "position_ids": position_ids.cpu().detach().numpy(),
             }
 
             if past_key_values is not None:
@@ -753,6 +755,7 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.FloatTensor] = None,
         past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        position_ids=None,
         **kwargs,
     ) -> CausalLMOutputWithCrossAttentions:
         print("input_ids.shape", input_ids.shape)
@@ -769,6 +772,7 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
             input_ids=input_ids,
             past_key_values=past_key_values,
             attention_mask=attention_mask,
+            position_ids=position_ids,
         )
         print("outputs.logits shape", outputs.logits.shape)
         print("outputs.logits", outputs.logits[0][-1][100:105])
@@ -784,46 +788,30 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
 
         if not past_key_values:
             past_key_values = self.decoder.generate_past_example(input_ids.size(0))
+            position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.int64).unsqueeze(0)
+        else:
+            position_ids = torch.tensor([[input_ids.shape[1] + 1]], dtype=torch.int64)
 
         print("----")
         print("input_ids shape here", input_ids.shape)
         print("attention_mask shape here", attention_mask.shape)
         print("pkv here", past_key_values[0][0].shape)
 
-        """
-        if past_key_values[0][0].size(2) == 1:
-            dummy_id = torch.zeros((input_ids.shape[0], 1), dtype=torch.int64)
-            input_ids = torch.cat((dummy_id, input_ids), dim=1)
-            attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
-            attention_mask[:, 0] = -10000
-        else:
-            attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
-            attention_mask[:, 0] = -10000
-            input_ids = input_ids[:, -1:]
-
-            if self.first_with_past is None:
-                self.first_with_past = True
-
-            if self.first_with_past is True:
-                past_key_values = list(past_key_values)
-                for i in range(len(past_key_values)):
-                    assert len(past_key_values[i]) == 2
-                    past_key_values[i] = (past_key_values[i][0][:, :, :-1], past_key_values[i][1][:, :, :-1])
-                past_key_values = tuple(past_key_values)
-                self.first_with_past = False
-        """
         attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
-        attention_mask[:, 0] = -10000
+        attention_mask[:, 0] = 0
         
         print("input_ids shape after", input_ids.shape)
         print("attention_mask shape after", attention_mask.shape)
         print("pkv after", past_key_values[0][0].shape)
+        print("position_ids after", position_ids)
+
+        
 
         return {
             "input_ids": input_ids if past_key_values[0][0].size(2) == 1 else input_ids[:, -1:],
             "past_key_values": past_key_values,
             "use_cache": use_cache,
-            "position_ids": None,
+            "position_ids": position_ids,
             "attention_mask": attention_mask,
             "token_type_ids": None,
         }
