@@ -764,7 +764,7 @@ class ORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
     ) -> CausalLMOutputWithCrossAttentions:
         print("-----")
         print("attention_mask.shape", attention_mask.shape)
-        print("past_key_values[0][0].shape", past_key_values[0][0].shape if past_key_values is not None else "NONE")
+        print("attention_mask", attention_mask)
 
         if past_key_values is None or self.decoder_with_past is None:
             print("input_ids.shape", input_ids.shape)
@@ -774,6 +774,10 @@ class ORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
             input_ids = input_ids[:, -1:]
             print("input_ids.shape", input_ids.shape)
             print("input_ids", input_ids)
+
+            #print("past_key_values[0][0].shape", past_key_values[0][0].shape)
+            #print("past_key_values[0][0][0, 0, 0]", past_key_values[0][0][0, 0, 0])
+            #print("past_key_values[0][0][0, 0, -1]", past_key_values[0][0][0, 0, -1])
             outputs = self.decoder_with_past(
                 input_ids=input_ids,
                 past_key_values=past_key_values,

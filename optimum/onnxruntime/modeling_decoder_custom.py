@@ -761,7 +761,10 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
         print("input_ids.shape", input_ids.shape)
         print("input_ids", input_ids)
         print("attention_mask.shape", attention_mask.shape)
-        print("past_key_values[0][0].shape", past_key_values[0][0].shape)
+        print("attention_mask", attention_mask)
+        #print("past_key_values[0][0].shape", past_key_values[0][0].shape)
+        #print("past_key_values[0][0][0, 0, 0]", past_key_values[0][0][0, 0, 0])
+        #print("past_key_values[0][0][0, 0, -1]", past_key_values[0][0][0, 0, -1])
 
         """
         if past_key_values is None or self.decoder_with_past is None:
@@ -790,16 +793,35 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
             past_key_values = self.decoder.generate_past_example(input_ids.size(0))
             position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.int64).unsqueeze(0)
         else:
-            position_ids = torch.tensor([[input_ids.shape[1] + 1]], dtype=torch.int64)
+            input_shape = input_ids.size()
+            #position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.int64).unsqueeze(0)
+            #position_ids = position_ids.unsqueeze(0).view(-1, input_shape[-1])
 
         print("----")
         print("input_ids shape here", input_ids.shape)
         print("attention_mask shape here", attention_mask.shape)
         print("pkv here", past_key_values[0][0].shape)
 
-        attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
-        attention_mask[:, 0] = 0
-        
+        if past_key_values[0][0].size(2) == 1:
+            attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
+            attention_mask[:, 0] = 0
+        else:
+            input_ids = input_ids[:, -1:]
+
+            if self.first_with_past is None:
+                self.first_with_past = True
+
+            if self.first_with_past is True:
+                past_key_values = list(past_key_values)
+                for i in range(len(past_key_values)):
+                    assert len(past_key_values[i]) == 2
+                    past_key_values[i] = (past_key_values[i][0][:, :, 1:], past_key_values[i][1][:, :, 1:])
+                past_key_values = tuple(past_key_values)
+                self.first_with_past = False
+            
+            past_length = past_key_values[0][0].size(-2)
+            position_ids = torch.tensor([[past_length]], dtype=torch.int64)
+
         print("input_ids shape after", input_ids.shape)
         print("attention_mask shape after", attention_mask.shape)
         print("pkv after", past_key_values[0][0].shape)
