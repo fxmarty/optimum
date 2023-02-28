@@ -132,15 +132,9 @@ class CustomORTDecoder:
         self.num_pkv = 2  # (self-attention key and value per decoder layer)
 
     def generate_past_example(self, batch_size, method='zeros'):
-        methods = {
-            'randn': torch.randn,
-            'ones': torch.ones,
-            'zeros': torch.zeros
-            # 'softmax':
-        }
         emb_per_head = self.normalized_config.hidden_size // self.normalized_config.num_attention_heads
         shape = [batch_size, self.config.num_attention_heads, 1, emb_per_head]
-        past_inputs = [[methods[method](shape) for _ in range(self.num_pkv)] for _ in range(self.normalized_config.num_layers)]
+        past_inputs = [[torch.zeros(shape) for _ in range(self.num_pkv)] for _ in range(self.normalized_config.num_layers)]
         return past_inputs
 
     def prepare_output_buffer(
@@ -362,6 +356,8 @@ class ORTModelDecoder(ORTModel):
             model_save_dir=model_save_dir,
         )
         self.config = config
+
+        self.first_with_past = None
 
         # TODO: remove at version 2.0
         def show_deprecated_argument(arg_name):
@@ -759,8 +755,8 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
         past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
         **kwargs,
     ) -> CausalLMOutputWithCrossAttentions:
-        print("----")
         print("input_ids.shape", input_ids.shape)
+        print("input_ids", input_ids)
         print("attention_mask.shape", attention_mask.shape)
         print("past_key_values[0][0].shape", past_key_values[0][0].shape)
 
@@ -768,15 +764,15 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
         if past_key_values is None or self.decoder_with_past is None:
             outputs = self.decoder(input_ids=input_ids, attention_mask=attention_mask)
         else:
-        """
+        """        
         outputs = self.decoder_with_past(
             input_ids=input_ids,
             past_key_values=past_key_values,
             attention_mask=attention_mask,
         )
         print("outputs.logits shape", outputs.logits.shape)
-        print("outputs.logits", outputs.logits[0][0][100:105])
-        print("outputs.logits argmax", outputs.logits[0][0].argmax())
+        print("outputs.logits", outputs.logits[0][-1][100:105])
+        print("outputs.logits argmax", outputs.logits[0][-1].argmax())
         return CausalLMOutputWithCrossAttentions(logits=outputs.logits, past_key_values=outputs.past_key_values)
 
     # Adapted from transformers.models.gpt2.modeling_gpt2.GPT2LMHeadModel.prepare_inputs_for_generation
@@ -789,8 +785,39 @@ class CustomORTModelForCausalLM(ORTModelDecoder, GenerationMixin):
         if not past_key_values:
             past_key_values = self.decoder.generate_past_example(input_ids.size(0))
 
+        print("----")
+        print("input_ids shape here", input_ids.shape)
+        print("attention_mask shape here", attention_mask.shape)
+        print("pkv here", past_key_values[0][0].shape)
+
+        """
+        if past_key_values[0][0].size(2) == 1:
+            dummy_id = torch.zeros((input_ids.shape[0], 1), dtype=torch.int64)
+            input_ids = torch.cat((dummy_id, input_ids), dim=1)
+            attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
+            attention_mask[:, 0] = -10000
+        else:
+            attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
+            attention_mask[:, 0] = -10000
+            input_ids = input_ids[:, -1:]
+
+            if self.first_with_past is None:
+                self.first_with_past = True
+
+            if self.first_with_past is True:
+                past_key_values = list(past_key_values)
+                for i in range(len(past_key_values)):
+                    assert len(past_key_values[i]) == 2
+                    past_key_values[i] = (past_key_values[i][0][:, :, :-1], past_key_values[i][1][:, :, :-1])
+                past_key_values = tuple(past_key_values)
+                self.first_with_past = False
+        """
         attention_mask = torch.ones([input_ids.shape[0], input_ids.shape[1] + 1], dtype=torch.int64)
-        attention_mask[:, 0] = 0
+        attention_mask[:, 0] = -10000
+        
+        print("input_ids shape after", input_ids.shape)
+        print("attention_mask shape after", attention_mask.shape)
+        print("pkv after", past_key_values[0][0].shape)
 
         return {
             "input_ids": input_ids if past_key_values[0][0].size(2) == 1 else input_ids[:, -1:],
