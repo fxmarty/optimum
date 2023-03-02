@@ -904,6 +904,7 @@ class ORTModelForSeq2SeqLM(ORTModelForConditionalGeneration, GenerationMixin):
 
         # Decode
         if past_key_values is None or self.decoder_with_past is None:
+            print("decoder_input_ids", decoder_input_ids.shape)
             decoder_outputs = self.decoder(
                 input_ids=decoder_input_ids,
                 encoder_hidden_states=encoder_outputs.last_hidden_state,
