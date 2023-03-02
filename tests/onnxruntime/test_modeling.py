@@ -3258,8 +3258,10 @@ class ORTModelForSeq2SeqLMIntegrationTest(ORTModelTestMixin):
             # build engine for a long sequence
             text = [" a very long input just for demo purpose, this is very long" * 10]
             encoded_input = tokenizer(text, return_tensors="pt").to("cuda")
+
+            length = 1 if use_cache is True else 40
             decoder_inputs = {
-                "decoder_input_ids": torch.ones((1, 30), dtype=torch.long) * onnx_model.config.decoder_start_token_id
+                "decoder_input_ids": torch.ones((1, length), dtype=torch.long) * onnx_model.config.decoder_start_token_id
             }
             _ = onnx_model(**encoded_input, **decoder_inputs)
 

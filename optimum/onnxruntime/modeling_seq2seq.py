@@ -895,7 +895,6 @@ class ORTModelForSeq2SeqLM(ORTModelForConditionalGeneration, GenerationMixin):
     ) -> Seq2SeqLMOutput:
         print("input_ids", input_ids.shape if input_ids is not None else "NONE")
         print("attention_mask", attention_mask.shape)
-        print("decoder_input_ids", decoder_input_ids.shape)
         print("past_key_values", past_key_values[0][0].shape if past_key_values is not None else "NONE")
         # Encode if needed : first prediction pass
         if encoder_outputs is None:
@@ -912,8 +911,10 @@ class ORTModelForSeq2SeqLM(ORTModelForConditionalGeneration, GenerationMixin):
                 labels=labels,
             )
         else:
+            decoder_input_ids = decoder_input_ids[:, -1:]  # Cut decoder_input_ids if past is used
+            print("decoder_input_ids", decoder_input_ids.shape)
             decoder_outputs = self.decoder_with_past(
-                input_ids=decoder_input_ids[:, -1:],  # Cut decoder_input_ids if past is used
+                input_ids=decoder_input_ids,  
                 past_key_values=past_key_values,
                 encoder_hidden_states=encoder_outputs.last_hidden_state,
                 encoder_attention_mask=attention_mask,
