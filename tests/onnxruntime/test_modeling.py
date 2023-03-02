@@ -3244,20 +3244,27 @@ class ORTModelForSeq2SeqLMIntegrationTest(ORTModelTestMixin):
 
             tokenizer = get_preprocessor(model_id)
 
-            decoder_inputs = {
-                "decoder_input_ids": torch.ones((1, 1), dtype=torch.long) * onnx_model.config.decoder_start_token_id
-            }
 
             # build engine for a short sequence
             print("------------- BUILD SHORT")
             text = ["short"]
             encoded_input = tokenizer(text, return_tensors="pt").to("cuda")
+            decoder_inputs = {
+                "decoder_input_ids": torch.ones((1, 1), dtype=torch.long) * onnx_model.config.decoder_start_token_id
+            }
+            print("encoded_input[input_ids]", encoded_input["input_ids"].shape)
+            print("encoded_input[attention_mask]", encoded_input["attention_mask"].shape)
             _ = onnx_model(**encoded_input, **decoder_inputs)
 
             print("------------- BUILD LONG")
             # build engine for a long sequence
             text = [" a very long input just for demo purpose, this is very long" * 10]
             encoded_input = tokenizer(text, return_tensors="pt").to("cuda")
+            print("encoded_input[input_ids]", encoded_input["input_ids"].shape)
+            print("encoded_input[attention_mask]", encoded_input["attention_mask"].shape)
+            decoder_inputs = {
+                "decoder_input_ids": torch.ones((1, 30), dtype=torch.long) * onnx_model.config.decoder_start_token_id
+            }
             _ = onnx_model(**encoded_input, **decoder_inputs)
 
             """
