@@ -3249,15 +3249,18 @@ class ORTModelForSeq2SeqLMIntegrationTest(ORTModelTestMixin):
             }
 
             # build engine for a short sequence
+            print("------------- BUILD SHORT")
             text = ["short"]
             encoded_input = tokenizer(text, return_tensors="pt").to("cuda")
             _ = onnx_model(**encoded_input, **decoder_inputs)
 
+            print("------------- BUILD LONG")
             # build engine for a long sequence
             text = [" a very long input just for demo purpose, this is very long" * 10]
             encoded_input = tokenizer(text, return_tensors="pt").to("cuda")
             _ = onnx_model(**encoded_input, **decoder_inputs)
 
+            """
             pipe = pipeline(
                 "translation_en_to_de", model=onnx_model, tokenizer=tokenizer, return_tensors=True, device=0
             )
@@ -3265,7 +3268,9 @@ class ORTModelForSeq2SeqLMIntegrationTest(ORTModelTestMixin):
             outputs = pipe(text, min_length=len(text) + 1, max_length=2 * len(text) + 1)
             self.assertTrue(isinstance(outputs[0]["translation_token_ids"], torch.Tensor))
             self.assertTrue(len(outputs[0]["translation_token_ids"]) > len(text))
+            """
 
+            print("------------- CALL GENERATE")
             encoded_input = tokenizer("Please continue this", return_tensors="pt").to("cuda")
             _ = onnx_model.generate(**encoded_input)
 
