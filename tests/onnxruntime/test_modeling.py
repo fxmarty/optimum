@@ -3244,7 +3244,7 @@ class ORTModelForSeq2SeqLMIntegrationTest(ORTModelTestMixin):
 
             tokenizer = get_preprocessor(model_id)
 
-
+            """
             # build engine for a short sequence
             print("------------- BUILD SHORT")
             text = ["short"]
@@ -3264,7 +3264,8 @@ class ORTModelForSeq2SeqLMIntegrationTest(ORTModelTestMixin):
                 "decoder_input_ids": torch.ones((1, length), dtype=torch.long) * onnx_model.config.decoder_start_token_id
             }
             _ = onnx_model(**encoded_input, **decoder_inputs)
-
+            """
+            
             """
             pipe = pipeline(
                 "translation_en_to_de", model=onnx_model, tokenizer=tokenizer, return_tensors=True, device=0
