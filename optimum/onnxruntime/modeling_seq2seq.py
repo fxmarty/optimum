@@ -893,7 +893,7 @@ class ORTModelForSeq2SeqLM(ORTModelForConditionalGeneration, GenerationMixin):
         labels: Optional[torch.LongTensor] = None,
         **kwargs,
     ) -> Seq2SeqLMOutput:
-        print("input_ids", input_ids.shape)
+        print("input_ids", input_ids.shape if input_ids is not None else "NONE")
         print("attention_mask", attention_mask.shape)
         print("decoder_input_ids", decoder_input_ids.shape)
         # Encode if needed : first prediction pass
