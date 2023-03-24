@@ -135,7 +135,7 @@ def profile_model(model, profile_name, input_ids, masks, num_batches, is_decoder
             else:
                 _ = model(input_ids, masks)
         
-        prof.export_chrome_trace("./traces/" + name + ".json")
+    prof.export_chrome_trace("./traces/" + name + ".json")
 
 if __name__ == "__main__":
     parser = get_parser()
