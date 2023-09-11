@@ -430,7 +430,8 @@ class OnnxConfig(ExportConfig, ABC):
         inputs = self.inputs
         inputs = self.rename_ambiguous_inputs(inputs)
 
-        ordered_inputs = {}
+        ordered_inputs = inputs
+        """
         if hasattr(model, "forward"):
             sig = inspect.signature(model.forward)
         else:
@@ -447,6 +448,7 @@ class OnnxConfig(ExportConfig, ABC):
             for name, dynamic_axes in to_insert:
                 name = self.torch_to_onnx_input_map.get(name, name)
                 ordered_inputs[name] = dynamic_axes
+        """
         print("ordered_inputs", ordered_inputs)
         return ordered_inputs
 

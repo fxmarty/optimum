@@ -71,8 +71,8 @@ class TextDecoderOnnxConfig(OnnxConfigWithPast):
         if self.use_past_in_inputs:
             common_inputs = {"input_ids": {0: "batch_size", 1: "sequence_length"}}
             common_inputs["position_ids"] = {0: "batch_size", 1: "sequence_length"}
-            self.add_past_key_values(common_inputs, direction="inputs")
             common_inputs["attention_mask"] = {0: "batch_size", 1: "past_sequence_length + 1"}
+            self.add_past_key_values(common_inputs, direction="inputs")
         else:
             common_inputs = {
                 "input_ids": {0: "batch_size", 1: "sequence_length"},
