@@ -677,7 +677,7 @@ class OnnxConfigWithPast(OnnxConfig, ABC):
             and "attention_mask" in dummy_inputs
         ):
             # Obtain the past sequence length from the value instead of the key (Bloom).
-            past_length = dummy_inputs["past_key_values"][0][1].shape[-2]
+            past_length = dummy_inputs["past_key_values"][0].shape[-2]
 
             dummy_inputs["attention_mask"] = DummyInputGenerator.pad_input_on_dim(
                 dummy_inputs["attention_mask"],

@@ -459,17 +459,15 @@ class DummyPastKeyValuesGenerator(DummyInputGenerator):
 
     def generate(self, input_name: str, framework: str = "pt", int_dtype: str = "int64", float_dtype: str = "fp32"):
         shape = (
+            2,
             self.batch_size,
             self.num_attention_heads,
             self.sequence_length,
             self.hidden_size // self.num_attention_heads,
         )
+        # TODO: bloom will fail
         return [
-            (
-                self.random_float_tensor(shape, framework=framework, dtype=float_dtype),
-                self.random_float_tensor(shape, framework=framework, dtype=float_dtype),
-            )
-            for _ in range(self.num_layers)
+            self.random_float_tensor(shape, framework=framework, dtype=float_dtype) for _ in range(self.num_layers)
         ]
 
 

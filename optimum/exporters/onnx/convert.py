@@ -571,6 +571,8 @@ def export_pytorch(
                 output_names = list(config.outputs.keys())
                 
                 print("input_names", input_names)
+                print("output_names", output_names)
+                print("dict(chain(inputs.items(), config.outputs.items()))", dict(chain(inputs.items(), config.outputs.items())))
                 for name, inp in dummy_inputs.items():
                     if isinstance(inp, torch.Tensor):
                         print(name, inp.shape)

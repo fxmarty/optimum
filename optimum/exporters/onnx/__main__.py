@@ -402,6 +402,7 @@ def main_export(
         monolith=monolith,
         custom_onnx_configs=custom_onnx_configs if custom_onnx_configs is not None else {},
         custom_architecture=custom_architecture,
+        int_dtype="int32",
         float_dtype=float_dtype,
         fn_get_submodels=fn_get_submodels,
         preprocessors=preprocessors,

@@ -122,7 +122,13 @@ class ModelPatcher:
             if isinstance(outputs, dict):
                 for name, value in outputs.items():
                     onnx_output_name = config.torch_to_onnx_output_map.get(name, name)
-                    if (
+                    if name == "past_key_values":
+                        outputs[name] = list(outputs[name])
+                        for i in range(len(value)):
+                            outputs[name][i] = torch.stack((outputs[name][i][0], outputs[name][i][1]))
+                            print("outputs[name][i]", outputs[name][i].shape)
+                        filterd_outputs[name] = outputs[name]
+                    elif (
                         onnx_output_name in config.outputs
                         or (allow_past_in_outputs and name.startswith("past_key_values"))
                         or any(key.startswith(onnx_output_name) for key in config.outputs.keys())
