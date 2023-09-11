@@ -69,22 +69,24 @@ class TextDecoderOnnxConfig(OnnxConfigWithPast):
     @property
     def inputs(self) -> Dict[str, Dict[int, str]]:
         if self.use_past_in_inputs:
-            common_inputs = {"input_ids": {0: "batch_size"}}
+            common_inputs = {"input_ids": {0: "batch_size", 1: "sequence_length"}}
+            common_inputs["position_ids"] = {0: "batch_size", 1: "sequence_length"}
             self.add_past_key_values(common_inputs, direction="inputs")
             common_inputs["attention_mask"] = {0: "batch_size", 1: "past_sequence_length + 1"}
         else:
             common_inputs = {
                 "input_ids": {0: "batch_size", 1: "sequence_length"},
+                "position_ids": {0: "batch_size", 1: "sequence_length"},
                 "attention_mask": {0: "batch_size", 1: "sequence_length"},
             }
         return common_inputs
 
     @property
     def outputs(self) -> Dict[str, Dict[int, str]]:
-        if self.is_merged is False:
+        if False and    self.is_merged is False:
             common_outputs = super().outputs
         else:
-            # in the merged case, we need to allow the `sequence_length` to be variable, as it is not 1
+            # in the merged case, we need to allow the `sequence    _length` to be variable, as it is not 1
             # during the first pass without past key values
             common_outputs = OrderedDict({"logits": {0: "batch_size", 1: "sequence_length"}})
             self.add_past_key_values(common_outputs, direction="outputs")

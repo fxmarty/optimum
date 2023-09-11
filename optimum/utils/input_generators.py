@@ -324,6 +324,7 @@ class DummyTextInputGenerator(DummyInputGenerator):
         "input_ids",
         "attention_mask",
         "token_type_ids",
+        "position_ids"
     )
 
     def __init__(
@@ -430,7 +431,7 @@ class DummyPastKeyValuesGenerator(DummyInputGenerator):
     Generates dummy past_key_values inputs.
     """
 
-    SUPPORTED_INPUT_NAMES = ("past_key_values",)
+    SUPPORTED_INPUT_NAMES = ("past_key_values", "past")
 
     def __init__(
         self,
@@ -477,7 +478,7 @@ class DummySeq2SeqPastKeyValuesGenerator(DummyInputGenerator):
     Generates dummy past_key_values inputs for seq2seq architectures.
     """
 
-    SUPPORTED_INPUT_NAMES = ("past_key_values",)
+    SUPPORTED_INPUT_NAMES = ("past_key_values")
 
     def __init__(
         self,

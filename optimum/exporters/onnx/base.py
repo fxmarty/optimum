@@ -435,18 +435,19 @@ class OnnxConfig(ExportConfig, ABC):
             sig = inspect.signature(model.forward)
         else:
             sig = inspect.signature(model.call)
-
+        
         for param in sig.parameters:
             param_regex = re.compile(rf"{param}(\.\d*)?")
             to_insert = []
             for name, dynamic_axes in inputs.items():
-                if re.match(param_regex, name):
+                if re.match(param_regex, name) or (param == "past_key_values" and "past" in name):
                     to_insert.append((name, dynamic_axes))
             # TODO: figure out a smart way of re-ordering potential nested structures.
             # to_insert = sorted(to_insert, key=lambda t: t[0])
             for name, dynamic_axes in to_insert:
                 name = self.torch_to_onnx_input_map.get(name, name)
                 ordered_inputs[name] = dynamic_axes
+        print("ordered_inputs", ordered_inputs)
         return ordered_inputs
 
     @add_dynamic_docstring(text=GENERATE_DUMMY_DOCSTRING, dynamic_elements=DEFAULT_DUMMY_SHAPES)
@@ -647,7 +648,7 @@ class OnnxConfigWithPast(OnnxConfig, ABC):
         dummy_inputs_generators = self._create_dummy_input_generator_classes(**kwargs)
 
         dummy_inputs = {}
-        input_names = [key for key in self.inputs.keys() if not key.startswith("past_key_values")]
+        input_names = [key for key in self.inputs.keys() if not key.startswith("past")]
         if self.use_past:
             input_names.append("past_key_values")
 
@@ -709,7 +710,7 @@ class OnnxConfigWithPast(OnnxConfig, ABC):
         if (
             self.use_past is True
             and self.use_cache_branch is not False
-            and input_name in ["decoder_input_ids", "input_ids"]
+            and input_name in ["decoder_input_ids", "input_ids", "position_ids"]
         ):
             sequence_length = dummy_input_gen.sequence_length
             if "sequence_length" in input_shapes and input_shapes["sequence_length"] != 1:
@@ -751,8 +752,11 @@ class OnnxConfigWithPast(OnnxConfig, ABC):
             name = "present"
 
         for i in range(self._normalized_config.num_layers):
-            inputs_or_outputs[f"{name}.{i}.key"] = {0: "batch_size", 2: decoder_sequence_name}
-            inputs_or_outputs[f"{name}.{i}.value"] = {0: "batch_size", 2: decoder_sequence_name}
+            if direction == "inputs":
+                inputs_or_outputs[f"past_{i}"] = {1: "batch_size", 3: decoder_sequence_name}
+            else:
+                inputs_or_outputs[f"present_{i}"] = {1: "batch_size", 3: decoder_sequence_name}
+            # inputs_or_outputs[f"{name}.{i}.value"] = {0: "batch_size", 2: decoder_sequence_name}
 
     def flatten_past_key_values(self, flattened_output, name, idx, t):
         flattened_output[f"{name}.{idx}.key"] = t[0]

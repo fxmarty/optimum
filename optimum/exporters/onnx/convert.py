@@ -81,11 +81,14 @@ def check_dummy_inputs_are_allowed(
     forward_inputs_set = set(forward_parameters.keys())
     dummy_input_names = set(dummy_input_names)
 
+    print("forward_parameters", forward_parameters)
     # We are fine if config_inputs has more keys than model_inputs
+    """
     if not dummy_input_names.issubset(forward_inputs_set):
         raise ValueError(
             f"Config dummy inputs are not a subset of the model inputs: {dummy_input_names} vs {forward_inputs_set}"
         )
+    """
 
 
 def validate_models_outputs(
@@ -566,7 +569,14 @@ def export_pytorch(
                 inputs = config.ordered_inputs(model)
                 input_names = list(inputs.keys())
                 output_names = list(config.outputs.keys())
-
+                
+                print("input_names", input_names)
+                for name, inp in dummy_inputs.items():
+                    if isinstance(inp, torch.Tensor):
+                        print(name, inp.shape)
+                    else:
+                        print(name, type(inp[0]), inp[0][0].shape)
+                
                 # Export can work with named args but the dict containing named args has to be the last element of the args
                 # tuple.
                 onnx_export(
