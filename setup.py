@@ -48,26 +48,26 @@ BENCHMARK_REQUIRE = ["optuna", "tqdm", "scikit-learn", "seqeval", "torchvision",
 
 EXTRAS_REQUIRE = {
     "onnxruntime": [
-        "onnx",
+        "onnx<1.16",
         "onnxruntime>=1.11.0",
         "datasets>=1.2.1",
         "evaluate",
         "protobuf>=3.20.1",
     ],
     "onnxruntime-gpu": [
-        "onnx",
+        "onnx<1.16",
         "onnxruntime-gpu>=1.11.0",
         "datasets>=1.2.1",
         "evaluate",
         "protobuf>=3.20.1",
         "accelerate",  # ORTTrainer requires it.
     ],
-    "exporters": ["onnx", "onnxruntime", "timm"],
-    "exporters-gpu": ["onnx", "onnxruntime-gpu", "timm"],
+    "exporters": ["onnx<1.16", "onnxruntime", "timm"],
+    "exporters-gpu": ["onnx<1.16", "onnxruntime-gpu", "timm"],
     "exporters-tf": [
         "tensorflow>=2.4,<=2.12.1",
         "tf2onnx",
-        "onnx",
+        "onnx<1.16",
         "onnxruntime",
         "timm",
         "h5py",
